@@ -162,6 +162,7 @@ class Naarad(object):
       if 'config' not in kwargs:
         return CONSTANTS.ERROR
       self._analyses[0] = _Analysis(None, kwargs['config'])
+      self._analyses[0].test_id = 0
     error_count = 0
     self._input_directory = input_directory
     self._output_directory = output_directory

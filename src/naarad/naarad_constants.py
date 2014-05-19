@@ -25,6 +25,7 @@ ERROR = 6
 INVALID_CONFIG = 7
 
 # Report Constants
+DEFAULT_RESOURCES_PATH = 'resources'
 DEFAULT_REPORT_TITLE = 'naarad analysis report'
 STYLESHEET_INCLUDES = ['bootstrap.min.css', 'inversion.css']
 JAVASCRIPT_INCLUDES = ['jquery-1.7.1.min.js', 'dygraph-combined.js', 'bootstrap.js', 'sorttable.js', 'naarad.js']
@@ -44,6 +45,10 @@ TEMPLATE_CLIENT_CHARTING = 'default_client_charting_page.html'
 TEMPLATE_DIFF_CLIENT_CHARTING = 'default_diff_client_charting_page.html'
 TEMPLATE_DIFF_PAGE = 'default_diff_page.html'
 SUBMETRIC_HEADER = 'sub_metric'
+TEMPLATE_LANDING_PAGE = 'default_landing_page.html'
+TEMPLATE_ANALYZE_PAGE = 'default_analyze_page.html'
+TEMPLATE_VIEWREPORT_PAGE = 'default_viewreport_page.html'
+
 
 # Matplotlib Constants
 COLOR_PALETTE = ['black', 'steelblue', 'm', 'red', 'cyan', 'g', 'orange', 'gray']

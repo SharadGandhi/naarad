@@ -114,6 +114,16 @@ function add_chart(container_div)
   document.getElementById(chartingDiv + count.toString()).innerHTML="";
 }
 
-
-
-
+function upload_file()
+{
+    var formData = new FormData();
+    var xhr = new XMLHttpRequest();
+    for(var i=0;i<document.getElementById("the-file").files.length;i++)
+    {
+        formData.append("file[]", document.getElementById("the-file").files[i]);
+    }
+    xhr.open("POST", "/analyze", true);
+    xhr.send(formData);
+    document.getElementById("the-file").value = "";
+    document.getElementById("status-div").innerHTML = "Upload Complete. Request has been queued for analysis."
+}

@@ -1,0 +1,41 @@
+<body data-spy="scroll" data-target=".topbar" data-offset="90">
+<div class="topbar navbar navbar-fixed-top navbar-inverse">
+  <div class="navbar-inner">
+   <div class="container">
+    <div class="topbar-content">
+    <a class="brand" href="https://github.com/linkedin/naarad">naarad</a>
+    <ul class="nav">
+        <li>
+            <a href="/" title="Home">
+                <span>Home</span>
+            </a>
+        </li>
+        <li  class="active">
+            <a href="/analyze" title="Analyze">
+                <span>Analyze</span>
+            </a>
+        </li>
+        <li>
+            <a href="/view" title="View Report">
+                <span>View Report</span>
+            </a>
+        </li>
+    </ul>
+    </div><!-- /topbar-content -->
+   </div><!-- /container -->
+ </div><!-- /topbar-inner -->
+</div><!-- /topbar -->
+<div id="analyze-parent-div" class="container">
+  <div id="analyze-logs-div" class="content">
+    <div id="logs-selection-div" class="row">
+        <div class="span12">
+            <form method="post" action="/analyze" enctype="multipart/form-data" id="naarad-file-upload-form">
+                Select Files:<input id="the-file" name="file[]" type="file" multiple="">
+                <input type="button" value="Upload" onclick="upload_file()">
+            </form>
+        </div>
+        <div class="span12" id="status-div"></div>
+    </div>
+ </div>
+</div>
+</body>
