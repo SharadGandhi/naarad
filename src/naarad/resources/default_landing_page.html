@@ -32,6 +32,52 @@
         <p>Naarad is a highly configurable system analysis tool that parses and plots timeseries data for better visual correlation. Naarad was built to help in performance analysis and investigations.</p>
       </div>
     </div>
+    {%- if queued_analysis %}
+    <div id="queued-analysis-div" class="row">
+        <div class="span12">
+            <h3>Queued Analysis</h3>
+            <table class="table table-striped table-bordered sortable">
+                <thead>
+                    <th>Analysis ID</th>
+                    <th>URL</th>
+                    <th>Status</th>
+                </thead>
+
+                    {%- for analysis_id in queued_analysis %}
+                        <tr>
+                            <td>{{ analysis_id }}</td>
+                            <td><a href="http://localhost/analysis/{{ analysis_id }}" target="_blank">{{ analysis_id }}</a></td>
+                            <td>{{ queued_analysis[analysis_id] }}</td>
+                        </tr>
+                    {%- endfor %}
+
+            </table>
+        </div>
+    </div>
+    {%- endif %}
+    {%- if recent_analysis %}
+    <div id="recent-analysis-div" class="row">
+        <div class="span12">
+            <h3>Recent Analysis</h3>
+            <table class="table table-striped table-bordered sortable">
+                <thead>
+                    <th>Analysis ID</th>
+                    <th>URL</th>
+                    <th>Status</th>
+                </thead>
+
+                    {%- for analysis_id in recent_analysis %}
+                        <tr>
+                            <td>{{ analysis_id }}</td>
+                            <td><a href="http://localhost/analysis/{{ analysis_id }}" target="_blank">{{ analysis_id }}</a></td>
+                            <td>Completed</td>
+                        </tr>
+                    {%- endfor %}
+
+            </table>
+        </div>
+    </div>
+    {%- endif %}
  </div>
 </div>
 </body>

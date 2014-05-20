@@ -29,12 +29,27 @@
   <div id="analyze-logs-div" class="content">
     <div id="logs-selection-div" class="row">
         <div class="span12">
+            <h3>Step 1: Upload Logs</h3>
             <form method="post" action="/analyze" enctype="multipart/form-data" id="naarad-file-upload-form">
                 Select Files:<input id="the-file" name="file[]" type="file" multiple="">
                 <input type="button" value="Upload" onclick="upload_file()">
             </form>
         </div>
         <div class="span12" id="status-div"></div>
+    </div>
+    <div id="update-config-div" class="row">
+        <div class="span12">
+            <h3>Step 2: Update Config</h3>
+            <textarea id="config-textarea"></textarea>
+            <div class="span12">
+                <input type="button" value="Save Configuration">
+            </div>
+        </div>
+    </div>
+    <div id="kickoff-analysis-div" class="row">
+        <div class="span12">
+            <h3>Step 3: Analyze</h3>
+        </div>
     </div>
  </div>
 </div>

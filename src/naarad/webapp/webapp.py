@@ -1,3 +1,4 @@
+
 import os
 import Queue
 import sys
@@ -11,6 +12,7 @@ import threading
 import naarad.naarad_constants as CONSTANTS
 import naarad.resources
 from naarad import Naarad
+from naarad.webapp.circular_buffer import CircularBuffer
 
 template_loader = FileSystemLoader(naarad.resources.get_dir())
 template_environment = Environment(loader=template_loader)
@@ -18,11 +20,16 @@ header_template_data= { 'custom_stylesheet_includes' : CONSTANTS.STYLESHEET_INCL
                           'custom_javascript_includes' : CONSTANTS.JAVASCRIPT_INCLUDES,
                           'resource_path': CONSTANTS.DEFAULT_RESOURCES_PATH }
 tbd = Queue.Queue()
+recent_analysis = CircularBuffer(size=10)
+queued_analysis = {}
 
 def worker():
   while True:
     sessionid = tbd.get()
-    Naarad().analyze(os.path.join('/tmp',sessionid), os.path.join(os.path.join('/tmp',sessionid),'report'), config=os.path.join(os.path.join('/tmp',sessionid),'config-gc'))
+    queued_analysis[sessionid] = 'Processing'
+    Naarad().analyze(os.path.join('/tmp/analysis',sessionid), os.path.join(os.path.join('/tmp/analysis',sessionid),'report'), config=os.path.join(os.path.join('/tmp/analysis',sessionid),'config-gc'))
+    recent_analysis.append(sessionid)
+    queued_analysis.pop(sessionid)
     tbd.task_done()
 
 for i in range(10):
@@ -38,7 +45,7 @@ def landing_page():
   else:
     sessionid = get_sessionid()
   response_html = template_environment.get_template(CONSTANTS.TEMPLATE_HEADER).render(**header_template_data)
-  response_html += template_environment.get_template(CONSTANTS.TEMPLATE_LANDING_PAGE).render()
+  response_html += template_environment.get_template(CONSTANTS.TEMPLATE_LANDING_PAGE).render(recent_analysis=recent_analysis, queued_analysis=queued_analysis)
   response_html += template_environment.get_template(CONSTANTS.TEMPLATE_FOOTER).render(session_id=sessionid)
   response = make_response(response_html)
   if not request.cookies.get('sessionid'):
@@ -52,11 +59,12 @@ def upload_file():
   else:
     sessionid = get_sessionid()
   if request.method == 'POST':
-    if not os.path.exists(os.path.join('/tmp',sessionid)):
-      os.makedirs(os.path.join('/tmp',sessionid))
+    if not os.path.exists(os.path.join('/tmp/analysis/',sessionid)):
+      os.makedirs(os.path.join('/tmp/analysis/',sessionid))
     for file_name in request.files.getlist('file[]'):
-      file_name.save(os.path.join(os.path.join('/tmp',sessionid),file_name.filename))
+      file_name.save(os.path.join(os.path.join('/tmp/analysis/',sessionid),file_name.filename))
     tbd.put(sessionid)
+    queued_analysis[sessionid] = 'Queued'
 
   response_html = template_environment.get_template(CONSTANTS.TEMPLATE_HEADER).render(**header_template_data)
   response_html += template_environment.get_template(CONSTANTS.TEMPLATE_ANALYZE_PAGE).render()
@@ -75,7 +83,7 @@ def view_report_page():
   if request.method == 'POST':
     for file_name in request.files.keys():
       f = request.files[file_name]
-      f.save ('/tmp/' + sessionid + '/' + file_name)
+      f.save ('/tmp/analysis/' + sessionid + '/' + file_name)
   else:
     response_html = template_environment.get_template(CONSTANTS.TEMPLATE_HEADER).render(**header_template_data)
     response_html += template_environment.get_template(CONSTANTS.TEMPLATE_VIEWREPORT_PAGE).render()
@@ -84,7 +92,6 @@ def view_report_page():
     if not request.cookies.get('sessionid'):
       response.set_cookie('sessionid', sessionid)
   return response
-
 
 @app.route('/view/<report_id>')
 def view_report(report_id):
@@ -100,7 +107,6 @@ def api_tbd():
 
 def get_sessionid():
   return str(uuid.uuid4())
-
 
 if __name__ == "__main__":
   app.run(host='0.0.0.0')
