@@ -4,6 +4,8 @@
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
 Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 """
+NAARAD_LOG = 'naarad.log'
+
 # Metric Constants
 DEFAULT_SUMMARY_STATS = ['mean', 'std', 'p50', 'p75', 'p90', 'p95', 'p99', 'min', 'max']
 important_sub_metrics_import = {
@@ -61,7 +63,7 @@ X_TICKS_DATEFORMAT = '%H:%M:%S'
 Y_AXIS_OFFSET = 0.06
 Y_LABEL_FONTSIZE = 10
 Y_TICKS_FONTSIZE = 8
-ZOOM_FACTOR = 0
+ZOOM_FACTOR = 0.02
 
 # LinkedIn_Android_RUM Constants
 LIA_TIMING_NAME = 'timingName'
