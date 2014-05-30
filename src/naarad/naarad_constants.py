@@ -27,7 +27,7 @@ ERROR = 6
 INVALID_CONFIG = 7
 
 # Report Constants
-DEFAULT_RESOURCES_PATH = 'resources'
+RESOURCE_PATH = 'resources'
 DEFAULT_REPORT_TITLE = 'naarad analysis report'
 STYLESHEET_INCLUDES = ['bootstrap.min.css', 'inversion.css']
 JAVASCRIPT_INCLUDES = ['jquery-1.7.1.min.js', 'dygraph-combined.js', 'bootstrap.js', 'sorttable.js', 'naarad.js']
@@ -51,6 +51,9 @@ TEMPLATE_LANDING_PAGE = 'default_landing_page.html'
 TEMPLATE_ANALYZE_PAGE = 'default_analyze_page.html'
 TEMPLATE_VIEWREPORT_PAGE = 'default_viewreport_page.html'
 
+
+# Graphing constants
+DEFAULT_GRAPHING_LIBRARY = 'matplotlib'
 
 # Matplotlib Constants
 COLOR_PALETTE = ['black', 'steelblue', 'm', 'red', 'cyan', 'g', 'orange', 'gray']
@@ -85,3 +88,31 @@ DURING_ANALYSIS_RUN = 'in'
 POST_ANALYSIS_RUN = 'post'
 RUN_TYPE_WORKLOAD = 'workload'
 SECONDS_TO_KILL_AFTER_SIGTERM = 5
+
+#Auto Discover Metrics
+SUPPORTED_FILENAME_MAPPING = {
+  'gc.log' : 'GC',
+  'perf-results.xml' : 'JMETER',
+  'perf-result.xml' : 'JMETER',
+  'proc.vmstat.out' : 'PROCVMSTAT',
+  'procvmstat.out' : 'PROCVMSTAT',
+  'proc.meminfo.out' : 'PROCMEMINFO',
+  'procmeminfo.out' : 'PROCMEMINFO',
+  'proc.zoneinfo.out' : 'PROCZONEINFO',
+  'proczoneinfo.out' : 'PROCZONEINFO',
+  'sar.cpuhz.out' : 'SAR-cpuhz',
+  'sar.cpuusage.out' : 'SAR-cpuusage',
+  'sar.device.out' : 'SAR-device',
+  'sar.edev.out' : 'SAR-edev',
+  'sar.etcp.out' : 'SAR-etcp',
+  'sar.memory.out' : 'SAR-memory',
+  'sar.memutil.out' : 'SAR-memutil',
+  'sar.network.out' : 'SAR-network',
+  'sar.paging.out' : 'SAR-paging',
+  'sar.queue.out' : 'SAR-queue',
+  'sar.sock.out' : 'SAR-sock',
+  'sar.swapping.out' : 'SAR-swapping',
+  'sar.switching.out' : 'SAR-switching',
+  'sar.tcp.out' : 'SAR-tcp'
+}
+

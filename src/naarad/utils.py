@@ -19,16 +19,29 @@ import re
 import sys
 import time
 import urllib
+from naarad.naarad_imports import metric_classes, aggregate_metric_classes
 from naarad.sla import SLA
 from naarad.metrics.sar_metric import SARMetric
 from naarad.metrics.metric import Metric
 from naarad.graphing.plot_data import PlotData
-from naarad.run_steps.run_step import Run_Step
 from naarad.run_steps.local_cmd import Local_Cmd
 import naarad.naarad_constants as CONSTANTS
 
 logger = logging.getLogger('naarad.utils')
 
+def import_modules(module_dict, is_class_type=True):
+  return_dict = {}
+  for module_name, module_string in module_dict.items():
+    try:
+      if is_class_type:
+        file_name, class_name = module_string.rsplit('.', 1)
+        mod = __import__(file_name, fromlist=[class_name])
+        return_dict[module_name] = getattr(mod, class_name)
+      else:
+        return_dict[module_name] = __import__(module_string, fromlist=[module_string])
+    except ImportError:
+      pass
+  return return_dict
 
 def parse_user_defined_metric_classes(config_obj, metric_classes):
   """
@@ -107,7 +120,7 @@ def get_run_time_period(run_steps):
   :param run_steps: list of Run_Step objects
   :return: tuple of start and end timestamps
   """
-  init_ts_start = time.strftime("%Y-%m-%d %H:%M:%S")
+  init_ts_start = get_standardized_timestamp('now', None)
   ts_start = init_ts_start
   ts_end = '0'
   for run_step in run_steps:
@@ -184,10 +197,10 @@ def parse_basic_metric_options(config_obj, section):
 
     label = sanitize_string_section_name(section)
     if config_obj.has_option(section, 'ts_start'):
-      ts_start = config_obj.get(section, 'ts_start')
+      ts_start = get_standardized_timestamp(config_obj.get(section, 'ts_start'), None)
       config_obj.remove_option(section, 'ts_start')
     if config_obj.has_option(section, 'ts_end'):
-      ts_end = config_obj.get(section, 'ts_end')
+      ts_end = get_standardized_timestamp(config_obj.get(section, 'ts_end'), None)
       config_obj.remove_option(section, 'ts_end')
     if config_obj.has_option(section, 'precision'):
       precision = config_obj.get(section, 'precision')
@@ -223,16 +236,10 @@ def parse_metric_section(config_obj, section, metric_classes,  metrics, aggregat
 
   #TODO: Make user specify metric_type in config and not infer from section
   metric_type = section.split('-')[0]
-  if metric_type in metric_classes: # regular metrics
-    new_metric = metric_classes[metric_type](section, infile, hostname, outdir_default, resource_path, label, ts_start,
-                                             ts_end, rule_strings, important_sub_metrics, **other_options)
-  elif metric_type in aggregate_metric_classes:       #aggregate metrics
-    new_metric = aggregate_metric_classes[metric_type](section, aggr_hosts, aggr_metrics, metrics, outdir_default,
-                                                       resource_path, label, ts_start, ts_end, rule_strings,
-                                                       important_sub_metrics, **other_options)
-  else:            # new metrics. 
-    new_metric = Metric(section, infile, hostname, outdir_default, resource_path, label, ts_start, ts_end, rule_strings,
-                        important_sub_metrics, **other_options)
+  if metric_type in aggregate_metric_classes:
+    new_metric = initialize_aggregate_metric(section, aggr_hosts, aggr_metrics, metrics, outdir_default, resource_path, label, ts_start, ts_end, rule_strings, important_sub_metrics, other_options)
+  else:
+    new_metric = initialize_metric(section, infile , hostname, outdir_default, resource_path, label, ts_start, ts_end, rule_strings, important_sub_metrics, other_options)
 
   if config_obj.has_option(section, 'ignore') and config_obj.getint(section, 'ignore') == 1:
     new_metric.ignore = True
@@ -251,10 +258,10 @@ def parse_global_section(config_obj, section):
   ts_start = None
   ts_end = None
   if config_obj.has_option(section, 'ts_start'):
-    ts_start = config_obj.get(section, 'ts_start')
+    ts_start = get_standardized_timestamp(config_obj.get(section, 'ts_start'), None)
     config_obj.remove_option(section, 'ts_start')
   if config_obj.has_option(section, 'ts_end'):
-    ts_end = config_obj.get(section, 'ts_end')
+    ts_end = get_standardized_timestamp(config_obj.get(section, 'ts_end'), None)
     config_obj.remove_option(section, 'ts_end')
   return ts_start, ts_end
 
@@ -310,7 +317,7 @@ def parse_graph_section(config_obj, section, outdir_default, indir_default):
   :return: List of options extracted from the GRAPH section
   """
   graph_timezone = None
-  graphing_library = 'matplotlib'
+  graphing_library = CONSTANTS.DEFAULT_GRAPHING_LIBRARY
   crossplots = []
 
   if config_obj.has_option(section, 'graphing_library'):
@@ -511,7 +518,7 @@ def tscsv_nway_file_merge(outfile, filelist, filler):
             outwords.append(filler)
       outf.write( ','.join(outwords) + '\n' )
 
-def nway_plotting(crossplots, metrics, output_directory, resource_path):
+def nway_plotting(crossplots, metrics, output_directory, resource_path, graphing_library):
   listlen = len(crossplots)
   if listlen == 0:
     return ''
@@ -528,7 +535,7 @@ def nway_plotting(crossplots, metrics, output_directory, resource_path):
         csv_file = get_default_csv(output_directory, val)
         plot_data.append(PlotData(input_csv=csv_file, csv_column=1, series_name=sanitize_string(val), y_label=sanitize_string(val), precision=None, graph_height=500, graph_width=1200, graph_type='line'))
       png_name = get_merged_plot_link_name(vals)
-      graphed, div_file = Metric.graphing_modules['matplotlib'].graph_data(plot_data, output_directory, resource_path, png_name)
+      graphed, div_file = Metric.graphing_modules[graphing_library].graph_data(plot_data, output_directory, resource_path, png_name)
       if graphed:
         correlated_plots.append(div_file)
     else:
@@ -815,7 +822,8 @@ def validate_arguments(args):
       logger.error('No Output location specified')
       print_usage()
       sys.exit(0)
-  elif not (args.config and args.output_dir):
+  # elif not (args.config and args.output_dir):
+  elif not args.output_dir:
     print_usage()
     sys.exit(0)
 
@@ -825,5 +833,73 @@ def print_usage():
   """
   print ("Usage: "
                "\n To generate a diff report      : naarad -d report1 report2 -o <output_location> -c <optional: config-file> -e <optional: turn on exit code>"
-               "\n To generate an analysis report : naarad -i <input_location> -o <output_location> -c <config_file> -e <optional: turn on exit code>")
+               "\n To generate an analysis report : naarad -i <input_location> -o <output_location> -c <optional: config_file> -e <optional: turn on exit code> -n <optional: disable plotting of images>")
 
+
+def discover_by_name(input_directory, output_directory):
+  """
+  Auto discover metric types from the files that exist in input_directory and return a list of metrics
+  :param: input_directory: The location to scan for log files
+  :param: output_directory: The location for the report
+  """
+  metric_list = []
+  log_files = os.listdir(input_directory)
+  for log_file in log_files:
+    if log_file in CONSTANTS.SUPPORTED_FILENAME_MAPPING.keys():
+      metric_list.append(initialize_metric(CONSTANTS.SUPPORTED_FILENAME_MAPPING[log_file], [log_file], None, output_directory, CONSTANTS.RESOURCE_PATH, CONSTANTS.SUPPORTED_FILENAME_MAPPING[log_file], None, None, {}, None, {}))
+    else:
+      logger.warning('Unable to determine metric type for file: %s', log_file)
+  return metric_list
+
+def initialize_metric(section, infile_list, hostname, output_directory, resource_path, label, ts_start, ts_end, rule_strings, important_sub_metrics, other_options):
+  """
+  Initialize appropriate metric based on type of metric.
+  :param: section: config section name or auto discovered metric type
+  :param: infile_list: list of input log files for the metric
+  :param: hostname: hostname associated with the logs origin
+  :param: output_directory: report location
+  :param: resource_path: resource path for report
+  :param: label: label for config section or auto discovered metric type
+  :param: ts_start: start time for analysis
+  :param: ts_end: end time for analysis
+  :param: rule_strings: list of slas
+  :param: important_sub_metrics: list of important sub metrics
+  :param: other_options: kwargs
+  :return: metric object
+  """
+  bin_path = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),'bin'))
+  metric = None
+  metric_type = section.split('-')[0]
+  if metric_type in metric_classes:
+    if 'SAR' in metric_type:
+      metric = metric_classes['SAR'](section, infile_list, hostname, output_directory, resource_path, label, ts_start, ts_end, rule_strings, important_sub_metrics, **other_options)
+    else:
+      metric = metric_classes[metric_type](section, infile_list, hostname, output_directory, resource_path, label, ts_start, ts_end, rule_strings, important_sub_metrics, **other_options)
+  else:
+    metric = Metric(section, infile_list, hostname, output_directory, resource_path, label, ts_start, ts_end, rule_strings, important_sub_metrics, **other_options)
+  metric.bin_path = bin_path
+  return metric
+
+def initialize_aggregate_metric(section, aggr_hosts, aggr_metrics, metrics, outdir_default, resource_path, label, ts_start, ts_end, rule_strings, important_sub_metrics, other_options):
+  """
+  Initialize aggregate metric
+  :param: section: config section name
+  :param: aggr_hosts: list of hostnames to aggregate
+  :param: aggr_metrics: list of metrics to aggregate
+  :param: metrics: list of metric objects associated with the current naarad analysis
+  :param: outdir_default: report location
+  :param: resource_path: resource path for report
+  :param: label: label for config section
+  :param: ts_start: start time for analysis
+  :param: ts_end: end time for analysis
+  :param: rule_strings: list of slas
+  :param: important_sub_metrics: list of important sub metrics
+  :param: other_options: kwargs
+  :return: metric object
+  """
+  bin_path = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),'bin'))
+  metric = None
+  metric_type = section.split('-')[0]
+  metric = aggregate_metric_classes[metric_type](section, aggr_hosts, aggr_metrics, metrics, outdir_default, resource_path, label, ts_start, ts_end, rule_strings, important_sub_metrics, **other_options)
+  metric.bin_path = bin_path
+  return metric
