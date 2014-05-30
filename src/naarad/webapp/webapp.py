@@ -18,7 +18,7 @@ template_loader = FileSystemLoader(naarad.resources.get_dir())
 template_environment = Environment(loader=template_loader)
 header_template_data= { 'custom_stylesheet_includes' : CONSTANTS.STYLESHEET_INCLUDES,
                           'custom_javascript_includes' : CONSTANTS.JAVASCRIPT_INCLUDES,
-                          'resource_path': CONSTANTS.RESOURCES_PATH }
+                          'resource_path': CONSTANTS.RESOURCE_PATH }
 tbd = Queue.Queue()
 recent_analysis = CircularBuffer(size=10)
 queued_analysis = {}
