@@ -76,7 +76,7 @@ def is_valid_url(url):
   :return: True or False
   """
   regex = re.compile(
-      r'^(http|https|ftp)://[A-Za-z0-9]+(-[A-Za-z0-9]+)*([:][A-Za-z0-9]+(-[A-Za-z0-9]+)*){0,1}([@][A-Za-z0-9]+(-[A-Za-z0-9]+)*){0,1}(\.[A-Za-z0-9]+(-[A-Za-z0-9]+)*)*(:[0-9]{1,5}){0,1}(/[A-Za-z0-9]*[A-Za-z0-9-._\(\)]*)*([?#&].*)*$')
+      r'^(http|https|ftp)://[A-Za-z0-9]+(-[A-Za-z0-9]+)*([:][A-Za-z0-9]+(-[A-Za-z0-9]+)*){0,1}([@][A-Za-z0-9]+(-[A-Za-z0-9]+)*){0,1}(\.[A-Za-z0-9]+(-[A-Za-z0-9]+)*)*(:[0-9]{1,5}){0,1}(/[A-Za-z0-9=]*[A-Za-z0-9-._\(\)]*)*([?#&].*)*$')
   if regex.match(url):
     logger.info( "URL given as config")
     return True
@@ -584,6 +584,8 @@ def calculate_stats(data_list, stats_to_calculate = ['mean', 'std'], percentiles
       }
   calculated_stats = {}
   calculated_percentiles = {}
+  if len(data_list) == 0:
+    return calculated_stats, calculated_percentiles
   for stat in stats_to_calculate:
     if stat in stats_to_numpy_method_map.keys():
       calculated_stats[stat] = stats_to_numpy_method_map[stat](data_list)

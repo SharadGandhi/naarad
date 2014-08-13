@@ -141,21 +141,6 @@ class JmeterMetric(Metric):
             data[self.get_csv(transaction, metric)].append(','.join([time_stamp, str(metric_data/float(averaging_factor))]))
     return None
 
-  def get_aggregation_timestamp(self, timestamp, granularity='minute'):
-    """
-    Return a timestamp from the raw epoch time based on the granularity preferences passed in.
-
-    :param string timestamp: raw epoch timestamp from the jmeter log line
-    :param string granularity: aggregation granularity used for plots.
-    :return: string aggregate_timestamp that will be used for metrics aggregation in all functions for JmeterMetric
-    """
-    if granularity == 'hour':
-      return datetime.datetime.utcfromtimestamp(int(timestamp) / 1000).strftime('%Y-%m-%d %H') + ':00:00', 3600
-    elif granularity == 'minute':
-      return datetime.datetime.utcfromtimestamp(int(timestamp) / 1000).strftime('%Y-%m-%d %H:%M') + ':00', 60
-    else:
-      return datetime.datetime.utcfromtimestamp(int(timestamp) / 1000).strftime('%Y-%m-%d %H:%M:%S'), 1
-
   def calculate_key_stats(self, metric_store):
     """
     Calculate key statistics for given data and store in the class variables calculated_stats and calculated_percentiles
@@ -178,16 +163,17 @@ class JmeterMetric(Metric):
                                      stats_to_calculate, percentiles_to_calculate)
       self.update_summary_stats(transaction_key)
       transaction_key = transaction + '.' + 'qps'
-      self.calculated_stats[transaction_key], self.calculated_percentiles[transaction_key] = \
-        naarad.utils.calculate_stats(metric_store['qps'][transaction].values(),
-                                     stats_to_calculate, percentiles_to_calculate)
-      self.update_summary_stats(transaction_key)
+      if len(metric_store['qps'][transaction].values()) > 0:
+        self.calculated_stats[transaction_key], self.calculated_percentiles[transaction_key] = \
+          naarad.utils.calculate_stats(metric_store['qps'][transaction].values(),
+                                       stats_to_calculate, percentiles_to_calculate)
+        self.update_summary_stats(transaction_key)
       transaction_key = transaction + '.' + 'ResponseSize'
       self.calculated_stats[transaction_key], self.calculated_percentiles[transaction_key] = \
         naarad.utils.calculate_stats(list(heapq.merge(*metric_store['by'][transaction].values())),
                                      stats_to_calculate, percentiles_to_calculate)
       self.update_summary_stats(transaction_key)
-      if 'eqps' in metric_store.keys():
+      if 'eqps' in metric_store.keys() and transaction in metric_store['eqps'].keys():
         transaction_key = transaction + '.' + 'ErrorsPerSecond'
         self.calculated_stats[transaction_key], self.calculated_percentiles[transaction_key] = \
           naarad.utils.calculate_stats(metric_store['eqps'][transaction].values(),
@@ -216,6 +202,9 @@ class JmeterMetric(Metric):
     gc.collect()
     return status
 
+  def _sanitize_label(self, raw_label):
+    return raw_label.replace('/', '_').replace('?', '_')
+
   def parse_xml_jtl(self, granularity):
     """
     Parse Jmeter workload output in XML format and extract overall and per transaction data and key statistics
@@ -228,14 +217,23 @@ class JmeterMetric(Metric):
     line_regex = re.compile(r' (lb|ts|t|by|s)="([^"]+)"')
     for input_file in self.infile_list:
       logger.info('Processing : %s', input_file)
+      timestamp_format = None
       with open(input_file) as infile:
         for line in infile:
           if '<httpSample' not in line and '<sample' not in line:
             continue
           line_data = dict(re.findall(line_regex, line))
-          aggregate_timestamp, averaging_factor = self.get_aggregation_timestamp(line_data['ts'], granularity)
-          self.aggregate_count_over_time(processed_data, line_data, [line_data['lb'], 'Overall_Summary'], aggregate_timestamp)
-          self.aggregate_values_over_time(processed_data, line_data, [line_data['lb'], 'Overall_Summary'], ['t', 'by'], aggregate_timestamp)
+          if not timestamp_format or timestamp_format == 'unknown':
+            timestamp_format = naarad.utils.detect_timestamp_format(line_data['ts'])
+          if timestamp_format == 'unknown':
+            continue
+          ts = naarad.utils.get_standardized_timestamp(line_data['ts'], timestamp_format)
+          if ts == -1:
+            continue
+          ts = naarad.utils.reconcile_timezones(ts, self.timezone, self.graph_timezone)
+          aggregate_timestamp, averaging_factor = self.get_aggregation_timestamp(ts, granularity)
+          self.aggregate_count_over_time(processed_data, line_data, [self._sanitize_label(line_data['lb']), 'Overall_Summary'], aggregate_timestamp)
+          self.aggregate_values_over_time(processed_data, line_data, [self._sanitize_label(line_data['lb']), 'Overall_Summary'], ['t', 'by'], aggregate_timestamp)
         logger.info('Finished parsing : %s', input_file)
     logger.info('Processing metrics for output to csv')
     self.average_values_for_plot(processed_data, data, averaging_factor)
